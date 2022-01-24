@@ -6,7 +6,7 @@ visualization_flag = false;
 
 video_flag = 0;
 
-if video_flag==1
+if video_flag == 1
     framerate = 10;
     vid_image = VideoWriter('1229_data5');
     vid_image.FrameRate = framerate;
@@ -14,23 +14,14 @@ if video_flag==1
 end
 
 %% at first time you should build %%
-addpath('C:\dev\mexopencv')
-addpath('C:\dev\mexopencv\opencv_contrib')
+% addpath('C:\dev\mexopencv')
+% addpath('C:\dev\mexopencv\opencv_contrib')
 % mexopencv.make('opencv_path','C:\dev\build\install','opencv_contrib',true);
 
-% data_folder = 'D:\★기업과제\굴삭기 2차년도\2021_08_26_experiment';
-% data_date = '_0826';
-% data_name = 'markers_swing1_exp120';
-% data_name = 'markers_boom1_exp120';
-
-% data_folder = 'D:\★기업과제\굴삭기 2차년도\2021_08_11_experiment';
-% data_date = '_0811';
-% data_name = '\20210811_HCE_exp\hce_data\2021-08-11_17_10_27';
-% data_name = '\20210811_HCE_exp\hce_data\marker_detection3_vertical';
-
-data_folder = 'D:\★기업과제\굴삭기 2차년도\2021_12_29_junha';
+% data_folder = 'D:\★기업과제\굴삭기 2차년도\2021_12_29_junha';
+data_folder = '/media/junhakim/Samsung USB/2021_12_29_junha';
 data_date = '_2022_0113'; %'_1229';
-data_name = '\data5';
+data_name = 'data4';
 % data1: id1에서 traking 두번
 % data2: tracking 없음
 % data3: tracking 없음
@@ -38,7 +29,7 @@ data_name = '\data5';
 % data5: tracking 없음
 cam_num = 0;
 
-f = fopen([data_folder,'\',data_name ,'\association.txt'],'r');
+f = fopen([data_folder,'/',data_name ,'/association.txt'],'r');
 fgets(f);
 n_line = 0;
 valid_data_num = zeros(1,10000);
@@ -84,7 +75,7 @@ for ii = valid_data_num(valid_data_num_idx)
         disp('haha');
     end
 
-    I = imread([data_folder,'\',data_name, '\', 'cam', num2str(cam_num), '\', num2str(ii),'.png']);
+    I = imread([data_folder,'/',data_name, '/', 'cam', num2str(cam_num), '/', num2str(ii),'.png']);
     
     I = undistortImage(I,intrinsics,"OutputView","same");
     [id,loc,pose] = readAprilTag(I,"tag36h11",intrinsics,tagSize);
@@ -112,24 +103,28 @@ for ii = valid_data_num(valid_data_num_idx)
         if isempty(find(id==jj))
 
             if ~isempty(Ap{k}.P0) && ~isempty(Ap{k}.P1) && ~isempty(Ap{k}.P2) && ~isempty(Ap{k}.P3) && group_change_flag(k) ==false 
+                
+                image_point(1,:) = Ap{k}.P0(:,end)';
+                image_point(2,:) = Ap{k}.P1(:,end)';
+                image_point(3,:) = Ap{k}.P2(:,end)';
+                image_point(4,:) = Ap{k}.P3(:,end)';
+                
+                pointTracker = vision.PointTracker('NumPyramidLevels',6);
+                
+                initialize(pointTracker,image_point,I_pre);
 
-                dst0 = cv.buildPyramid(I_pre);
-                dst1 = cv.buildPyramid(I);
+                [nextPts,status,scores] = pointTracker(I);
 
-                image_point{1,1} = Ap{k}.P0(:,end)';
-                image_point{1,2} = Ap{k}.P1(:,end)';
-                image_point{1,3} = Ap{k}.P2(:,end)';
-                image_point{1,4} = Ap{k}.P3(:,end)';
-
-                [nextPts,status,error] = cv.calcOpticalFlowPyrLK(dst0{1}, dst1{1}, image_point, 'WinSize',[31 31]);
-                disp(error');
+                fprintf("%.4f %.4f %.4f %.4f  >>>>>  frame: %d, id: %id",scores(1), scores(2), scores(3), scores(4), ii,  jj);
                 image_point2 = nextPts;
 
-                if sum(error)>50 || status(1)*status(2)*status(3)*status(4)==0
-                    disp(">>>>> KLT tracker is failed");
+                if mean(scores)<0.9 || status(1)*status(2)*status(3)*status(4)==0
+                    fprintf("  >>>>>  KLT tracker is failed\n");
                     group_num(k) = group_num(k) +1;
                     group_change_flag(k) = true;
                     continue;
+                else
+                    fprintf("\n");
                 end
 
                 tag_point_name0 = ['p_{',num2str(jj),'0}']; tag_point_name1 = ['p_{',num2str(jj),'1}'];
@@ -147,18 +142,18 @@ for ii = valid_data_num(valid_data_num_idx)
                     plot(image_point{3}(1,1),image_point{3}(1,2),'*b');
                     plot(image_point{4}(1,1),image_point{4}(1,2),'*b');
 
-                    plot(image_point2{1}(1,1),image_point2{1}(1,2),'sr'); plot(image_point2{1}(1,1),image_point2{1}(1,2),'+r');
-                    text(image_point2{1}(1,1),image_point2{1}(1,2),tag_point_name0,'Color','green','FontSize',10,'FontWeight','bold',...
-                        'Position',[image_point2{1}(1,1)-15,image_point2{1}(1,2)-20]);
-                    plot(image_point2{2}(1,1),image_point2{2}(1,2),'sr'); plot(image_point2{2}(1,1),image_point2{2}(1,2),'+r');
-                    text(image_point2{2}(1,1),image_point2{2}(1,2),tag_point_name1,'Color','green','FontSize',10,'FontWeight','bold',...
-                        'Position',[image_point2{2}(1,1)-15,image_point2{2}(1,2)+15]);
-                    plot(image_point2{3}(1,1),image_point2{3}(1,2),'sr'); plot(image_point2{3}(1,1),image_point2{3}(1,2),'+r');
-                    text(image_point2{3}(1,1),image_point2{3}(1,2),tag_point_name2,'Color','green','FontSize',10,'FontWeight','bold',...
-                        'Position',[image_point2{3}(1,1)-15,image_point2{3}(1,2)+15]);
-                    plot(image_point2{4}(1,1),image_point2{4}(1,2),'sr'); plot(image_point2{4}(1,1),image_point2{4}(1,2),'+r');
-                    text(image_point2{4}(1,1),image_point2{4}(1,2),tag_point_name3,'Color','green','FontSize',10,'FontWeight','bold',...
-                        'Position',[image_point2{4}(1,1)-15,image_point2{4}(1,2)-20]);
+                    plot(image_point2(1,1),image_point2(1,2),'sr'); plot(image_point2(1,1),image_point2(1,2),'+r');
+                    text(image_point2(1,1),image_point2(1,2),tag_point_name0,'Color','green','FontSize',10,'FontWeight','bold',...
+                        'Position',[image_point2(1,1)-15,image_point2(1,2)-20]);
+                    plot(image_point2(2,1),image_point2(2,2),'sr'); plot(image_point2(2,1),image_point2(2,2),'+r');
+                    text(image_point2(2,1),image_point2(2,2),tag_point_name1,'Color','green','FontSize',10,'FontWeight','bold',...
+                        'Position',[image_point2(2,1)-15,image_point2(2,2)+15]);
+                    plot(image_point2(3,1),image_point2(3,2),'sr'); plot(image_point2(3,1),image_point2(3,2),'+r');
+                    text(image_point2(3,1),image_point2(3,2),tag_point_name2,'Color','green','FontSize',10,'FontWeight','bold',...
+                        'Position',[image_point2(3,1)-15,image_point2(3,2)+15]);
+                    plot(image_point2(4,1),image_point2(4,2),'sr'); plot(image_point2(4,1),image_point2(4,2),'+r');
+                    text(image_point2(4,1),image_point2(4,2),tag_point_name3,'Color','green','FontSize',10,'FontWeight','bold',...
+                        'Position',[image_point2(4,1)-15,image_point2(4,2)-20]);
 
                 end
 
@@ -166,47 +161,31 @@ for ii = valid_data_num(valid_data_num_idx)
                 
                 Ap{k}.frame = [Ap{k}.frame, ii];
                 Ap{k}.frame_group = [Ap{k}.frame_group, group_num(k)];
-                Ap{k}.P0 = [Ap{k}.P0, [image_point2{1}(1,1);image_point2{1}(1,2)]];
-                Ap{k}.P1 = [Ap{k}.P1, [image_point2{2}(1,1);image_point2{2}(1,2)]];
-                Ap{k}.P2 = [Ap{k}.P2, [image_point2{3}(1,1);image_point2{3}(1,2)]];
-                Ap{k}.P3 = [Ap{k}.P3, [image_point2{4}(1,1);image_point2{4}(1,2)]];
+                Ap{k}.P0 = [Ap{k}.P0, [image_point2(1,1);image_point2(1,2)]];
+                Ap{k}.P1 = [Ap{k}.P1, [image_point2(2,1);image_point2(2,2)]];
+                Ap{k}.P2 = [Ap{k}.P2, [image_point2(3,1);image_point2(3,2)]];
+                Ap{k}.P3 = [Ap{k}.P3, [image_point2(4,1);image_point2(4,2)]];
                 
                 objectPoints{1,1} = Ap{k}.P0_3D{end}';
                 objectPoints{1,2} = Ap{k}.P1_3D{end}';
                 objectPoints{1,3} = Ap{k}.P2_3D{end}';
                 objectPoints{1,4} = Ap{k}.P3_3D{end}';
-                imagePoints = image_point2(1:4);
+                imagePoints = image_point2;
+                worldPoints = [objectPoints{1,1}; objectPoints{1,2}; objectPoints{1,3}; objectPoints{1,4}];
+                
+                [worldOrientation,worldLocation] = estimateWorldCameraPose(imagePoints,worldPoints,intrinsics);
 
-                [rvecs, tvecs, solutions] = cv.solvePnP( objectPoints(1,1:4), imagePoints, transpose(intrinsics.IntrinsicMatrix) );
-%                 for q = 1:solutions
-%                     rot = cv.Rodrigues(rvecs{q});
-%                     T_p3p{q} = [rot, tvecs{q} ; 0 0 0 1];
-%                     for qq=1:4
-%                         A = [transpose(intrinsics.IntrinsicMatrix), [0;0;0]] * (T_p3p{q}) * [objectPoints{qq}' ; 1];
-%                         B = A./A(end);
-%                         pt_p3p_proj(:,qq) = B(1:2,1);
-%                     end
-%                     for qq=1:4
-%                         reproj_err(:,qq) = norm(pt_p3p_proj(:,qq) - image_point2{qq}');
-%                     end
-%                     repro_err_sum(1,q) = sum(reproj_err);
-%                 end
-%                 [p3p_err, idx_p3p_sol] = min(repro_err_sum);
-%                 T_est = T_p3p{idx_p3p_sol};
-                if solutions == 0
-                    disp('PnP algorithm fails');
-                    return;
-                else
-                    rot = cv.Rodrigues(rvecs);
-                    T_p3p = [rot, tvecs; 0 0 0 1];
-                    T_est = T_p3p;
+                rot = worldOrientation;
+                tvecs = worldLocation';
+                T_p3p = [rot, tvecs; 0 0 0 1];
+                T_est = T_p3p;
 
-                    for qq=1:4
-                        A = [transpose(intrinsics.IntrinsicMatrix), [0;0;0]] * (T_p3p) * [objectPoints{qq}' ; 1];
-                        B = A./A(end);
-                        pt_p3p_proj(:,qq) = B(1:2,1);
-                    end
+                for qq=1:4
+                    A = [transpose(intrinsics.IntrinsicMatrix), [0;0;0]] * (T_p3p) * [objectPoints{qq}' ; 1];
+                    B = A./A(end);
+                    pt_p3p_proj(:,qq) = B(1:2,1);
                 end
+
                 
                 T = (T_est) * Ap{k}.T_cp{end};
                 Ap{k}.T_cp{length(Ap{k}.frame)} = T;
