@@ -1,0 +1,11 @@
+time_us cam0 exposure_us gain_dB 
+192.920000 /cam0/2.png 
+766.488000 /cam0/3.png 
+974.440000 /cam0/4.png 
+458.475000 /cam0/5.png 
+920.075000 /cam0/6.png 
+592.126000 /cam0/7.png 
+159.664000 /cam0/8.png 
+717.444000 /cam0/9.png 
+353.895000 /cam0/10.png 
+177.958000 /cam0/11.png 
